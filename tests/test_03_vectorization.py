@@ -9,5 +9,12 @@ class TestVectorization(unittest.TestCase):
         self.assertEqual(vectors.shape[0], 2)
         self.assertEqual(vectors.shape[1], 2)
 
+    def test_empty_input(self):
+        # Verifica que se maneje correctamente la entrada vacía
+        with self.assertRaises(ValueError):
+            generate_vector_space_models([], [])  # Entradas vacías
+
+
+
 if __name__ == '__main__':
     unittest.main()

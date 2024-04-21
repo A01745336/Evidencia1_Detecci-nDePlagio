@@ -20,5 +20,12 @@ class TestEvaluation(unittest.TestCase):
         auc_value = auc(fpr, tpr)
         self.assertAlmostEqual(auc_value, 0.75)
 
+    def test_mismatched_lengths(self):
+        # Verifica que se maneje correctamente cuando las longitudes no coinciden
+        similarities = [0.5]  # Solo un elemento
+        ground_truth = { 'doc1.txt': True, 'doc2.txt': False }  # Dos elementos
+        with self.assertRaises(ValueError):
+            evaluate_performance(similarities, 0.5, ground_truth)
+
 if __name__ == '__main__':
     unittest.main()
