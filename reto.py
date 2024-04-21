@@ -7,6 +7,7 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics import roc_curve, auc
 
 # Descarga de recursos necesarios de NLTK
 download('punkt')
@@ -51,6 +52,69 @@ def generate_vector_space_models(original_texts, suspicious_texts):
     return original_vectors, suspicious_vectors, vectorizer.get_feature_names_out()
 
 
+def evaluate_performance(similarities, threshold, ground_truth):
+    """
+    Evalúa el rendimiento de la herramienta de detección de plagio.
+    similarities: matriz de similitudes entre documentos sospechosos y originales.
+    threshold: el umbral de similitud para considerar un documento como plagiado.
+    ground_truth: dict con clave = nombre del documento sospechoso y valor = bool indicando si es plagiado.
+    
+    Retorna un dict con las métricas TP, FP, TN, FN.
+    """
+    TP = FP = TN = FN = 0
+    for i, susp_filename in enumerate(suspicious_filenames):
+        is_plagiarized = ground_truth[susp_filename]
+        # Considera el documento plagiado si alguna similitud supera el umbral.
+        detected_as_plagiarized = any(sim > threshold for sim in similarities[i])
+        
+        if is_plagiarized and detected_as_plagiarized:
+            TP += 1
+        elif not is_plagiarized and detected_as_plagiarized:
+            FP += 1
+        elif is_plagiarized and not detected_as_plagiarized:
+            FN += 1
+        elif not is_plagiarized and not detected_as_plagiarized:
+            TN += 1
+
+    return {"TP": TP, "FP": FP, "TN": TN, "FN": FN}
+
+
+def generate_report(performance_metrics, similarities, ground_truth_labels):
+    """
+    Genera un informe de rendimiento basado en las métricas dadas.
+    performance_metrics: dict con TP, FP, TN, FN.
+    similarities: lista de valores de similitud entre documentos.
+    ground_truth_labels: lista de etiquetas de verdad fundamental (0 para no plagiado, 1 para plagiado).
+    """
+    TP = performance_metrics["TP"]
+    FP = performance_metrics["FP"]
+    TN = performance_metrics["TN"]
+    FN = performance_metrics["FN"]
+    precision = TP / (TP + FP) if TP + FP > 0 else 0
+    recall = TP / (TP + FN) if TP + FN > 0 else 0
+    accuracy = (TP + TN) / (TP + FP + TN + FN) if TP + FP + TN + FN > 0 else 0
+    f1_score = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+
+    # Calcular AUC
+    fpr, tpr, thresholds = roc_curve(ground_truth_labels, similarities)
+    roc_auc = auc(fpr, tpr)
+
+    report = (
+        f"True Positives: {TP}\n"
+        f"False Positives: {FP}\n"
+        f"True Negatives: {TN}\n"
+        f"False Negatives: {FN}\n"
+        f"Precision: {precision:.2f}\n"
+        f"Recall: {recall:.2f}\n"
+        f"Accuracy: {accuracy:.2f}\n"
+        f"F1 Score: {f1_score:.2f}\n"
+        f"AUC (ROC): {roc_auc:.2f}\n"
+    )
+    print(report)
+    # Puedes añadir código aquí para guardar el informe en un archivo si es necesario.
+
+
+
 # En el flujo principal del script:
 if __name__ == "__main__":
     # Directorios de los documentos
@@ -73,6 +137,40 @@ if __name__ == "__main__":
 
     # Reportar resultados
     threshold = 0.2  # Umbral de similitud
+
+
+    # Información de ground truth para evaluación
+    ground_truth = {
+        'FID-01.txt': True,
+        'FID-02.txt': True,
+        'FID-03.txt': True,
+        'FID-04.txt': True,
+        'FID-05.txt': True,
+        'FID-06.txt': True,
+        'FID-07.txt': True,
+        'FID-08.txt': True,
+        'FID-09.txt': True,
+        'FID-10.txt': True,
+        'FID-11.txt': False,
+    }
+
+    # Evaluación del rendimiento
+    performance_metrics = evaluate_performance(similarities, threshold, ground_truth)
+    
+    # Aplanar las similitudes y preparar las etiquetas de ground truth
+    all_similarities = []
+    ground_truth_labels = []
+
+    for i, filename in enumerate(suspicious_filenames):
+        for j in range(len(original_filenames)):
+            all_similarities.append(similarities[i][j])
+            # Asumimos que ground_truth usa nombres de archivos sospechosos y marca si son plagiados
+            ground_truth_labels.append(1 if ground_truth[filename] else 0)
+
+    # Llamada a generate_report
+    generate_report(performance_metrics, all_similarities, ground_truth_labels)
+
+
     for i, filename in enumerate(suspicious_filenames):
         print("\n")
         print(f"Top coincidencias para el archivo sospechoso '{filename}':")
