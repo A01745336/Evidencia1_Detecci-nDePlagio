@@ -1,0 +1,1 @@
+Modern intelligent vehicles are equipped with advanced AI-based models designed for smart sensing, tasked with recognizing object classes in new and similar scenarios. Despite these advancements, it remains a significant challenge to detect all object classes across seen and unseen scenarios
