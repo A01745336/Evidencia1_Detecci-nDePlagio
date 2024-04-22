@@ -9,27 +9,35 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import roc_curve, auc
+from concurrent.futures import ProcessPoolExecutor
 
 # Descarga de recursos necesarios de NLTK
 inicio = time.time()
 download('punkt')
 download('stopwords')
 
-# Funciones de utilidad
-def read_files_in_directory(directory):
-    files_contents = []
-    file_names = []
-    for filename in os.listdir(directory):
-        if filename.endswith('.txt'):
-            file_path = os.path.join(directory, filename)
-            try:
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    files_contents.append(file.read())
-            except UnicodeDecodeError:
-                with open(file_path, 'r', encoding='windows-1252') as file:
-                    files_contents.append(file.read())
-            file_names.append(filename)
-    return file_names, files_contents
+
+def read_and_preprocess_file(file_path):
+    """Lee y preprocesa un solo archivo."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+    except UnicodeDecodeError:
+        with open(file_path, 'r', encoding='windows-1252') as file:
+            content = file.read()
+    # Preprocesar el contenido del archivo
+    processed_content = preprocess(content)
+    return processed_content
+
+
+def parallel_process_files(directory):
+    """Procesa en paralelo todos los archivos de texto en un directorio."""
+    file_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.txt')]
+    processed_texts = []
+    # Ejecuta la lectura y el preprocesamiento en paralelo
+    with ProcessPoolExecutor(max_workers=6) as executor:
+        processed_texts = list(executor.map(read_and_preprocess_file, file_paths, chunksize=10))
+    return file_paths, processed_texts
 
 
 def preprocess(text):
@@ -45,8 +53,6 @@ def preprocess(text):
 
 def generate_vector_space_models(original_texts, suspicious_texts):
     """ Genera modelos de espacio vectorial para textos originales y sospechosos. """
-    if not all(isinstance(text, str) for text in original_texts + suspicious_texts):
-        raise TypeError("All inputs must be strings.")
     vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 3))
     # Combina todos los textos para crear un espacio vectorial común
     combined_texts = original_texts + suspicious_texts
@@ -56,7 +62,7 @@ def generate_vector_space_models(original_texts, suspicious_texts):
     return original_vectors, suspicious_vectors, vectorizer.get_feature_names_out()
 
 
-def evaluate_performance(similarities, threshold, ground_truth, suspicious_filenames1):
+def evaluate_performance(similarities, threshold, ground_truth):
     """
     Evalúa el rendimiento de la herramienta de detección de plagio.
     similarities: matriz de similitudes entre documentos sospechosos y originales.
@@ -66,8 +72,10 @@ def evaluate_performance(similarities, threshold, ground_truth, suspicious_filen
     Retorna un dict con las métricas TP, FP, TN, FN.
     """
     TP = FP = TN = FN = 0
-    for i, susp_filename in enumerate(suspicious_filenames1):
-        is_plagiarized = ground_truth[susp_filename]
+    for i, file_path in enumerate(suspicious_filenames):
+        # Extrae el nombre del archivo de la ruta
+        susp_filename = os.path.basename(file_path)
+        is_plagiarized = ground_truth.get(susp_filename)
         # Considera el documento plagiado si alguna similitud supera el umbral.
         detected_as_plagiarized = any(sim > threshold for sim in similarities[i])
         
@@ -125,13 +133,9 @@ if __name__ == "__main__":
     path_to_originals = './TextosOriginales'
     path_to_suspicious = './TextosConPlagio'
     
-    # Cargar y procesar los documentos
-    original_filenames, original_texts = read_files_in_directory(path_to_originals)
-    suspicious_filenames, suspicious_texts = read_files_in_directory(path_to_suspicious)
-
-    # Preprocesar todos los textos
-    processed_originals = [preprocess(text) for text in original_texts]
-    processed_suspicious = [preprocess(text) for text in suspicious_texts]
+    # Paralelizar el procesamiento de archivos originales y sospechosos
+    original_filenames, processed_originals = parallel_process_files(path_to_originals)
+    suspicious_filenames, processed_suspicious = parallel_process_files(path_to_suspicious)
 
     # Crear modelos de espacio vectorial común
     original_vectors, suspicious_vectors, feature_names = generate_vector_space_models(processed_originals, processed_suspicious)
@@ -159,21 +163,20 @@ if __name__ == "__main__":
     }
 
     # Evaluación del rendimiento
-    performance_metrics = evaluate_performance(similarities, threshold, ground_truth, suspicious_filenames)
+    performance_metrics = evaluate_performance(similarities, threshold, ground_truth)
     
     # Aplanar las similitudes y preparar las etiquetas de ground truth
     all_similarities = []
     ground_truth_labels = []
 
-    for i, filename in enumerate(suspicious_filenames):
+    for i, file_path in enumerate(suspicious_filenames):
+        susp_filename = os.path.basename(file_path)
         for j in range(len(original_filenames)):
             all_similarities.append(similarities[i][j])
-            # Asumimos que ground_truth usa nombres de archivos sospechosos y marca si son plagiados
-            ground_truth_labels.append(1 if ground_truth[filename] else 0)
+            ground_truth_labels.append(1 if ground_truth.get(susp_filename) else 0)
 
     # Llamada a generate_report
     generate_report(performance_metrics, all_similarities, ground_truth_labels)
-
 
     for i, filename in enumerate(suspicious_filenames):
         print("\n")
