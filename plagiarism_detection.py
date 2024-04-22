@@ -156,6 +156,7 @@ if __name__ == "__main__":
         'FID-09.txt': True,
         'FID-10.txt': True,
         'FID-11.txt': True,
+        'FID-12.txt': True,
 
         'FID-13.txt': True,
         'FID-14.txt': True,
