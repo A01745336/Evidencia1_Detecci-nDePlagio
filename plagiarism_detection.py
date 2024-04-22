@@ -157,21 +157,18 @@ if __name__ == "__main__":
         'FID-10.txt': True,
         'FID-11.txt': True,
         'FID-12.txt': True,
-
         'FID-13.txt': True,
         'FID-14.txt': True,
         'FID-15.txt': True,
         'FID-16.txt': False,
         'FID-17.txt': False,
         'FID-18.txt': False,
-
         'FID-19.txt': True,
         'FID-20.txt': False,
         'FID-21.txt': True,
         'FID-22.txt': True,
         'FID-23.txt': True,
         'FID-24.txt': True,
-        
         'FID-25.txt': True,
         'FID-26.txt': False,
         'FID-27.txt': True,
@@ -180,9 +177,6 @@ if __name__ == "__main__":
         'FID-30.txt': False,
         'FID-31.txt': False,
     }
-
-    # Evaluación del rendimiento
-    performance_metrics = evaluate_performance(similarities, threshold, ground_truth, suspicious_filenames)
     
     # Aplanar las similitudes y preparar las etiquetas de ground truth
     all_similarities = []
@@ -193,10 +187,6 @@ if __name__ == "__main__":
             all_similarities.append(similarities[i][j])
             # Asumimos que ground_truth usa nombres de archivos sospechosos y marca si son plagiados
             ground_truth_labels.append(1 if ground_truth[filename] else 0)
-
-    # Llamada a generate_report
-    generate_report(performance_metrics, all_similarities, ground_truth_labels)
-
 
     for i, filename in enumerate(suspicious_filenames):
         print("\n")
@@ -210,4 +200,7 @@ if __name__ == "__main__":
 
     fin = time.time()
     print(f'\n El tiempo de ejecución fue de : {fin-inicio}')
-        
+    # Evaluación del rendimiento
+    performance_metrics = evaluate_performance(similarities, threshold, ground_truth, suspicious_filenames)
+    # Llamada a generate_report
+    generate_report(performance_metrics, all_similarities, ground_truth_labels)
