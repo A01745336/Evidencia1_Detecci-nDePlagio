@@ -33,5 +33,56 @@ class TestEvaluation(unittest.TestCase):
         with self.assertRaises(IndexError):
             evaluate_performance(similarities, 0.5, ground_truth, suspicious_filenames)
 
+    def test_all_false_positives(self):
+        suspicious_filenames = ['doc1.txt', 'doc2.txt']
+        similarities = [
+                        [0.6],  # False positive
+                        [0.8]   # False positive
+                       ]
+        ground_truth = {'doc1.txt': False, 'doc2.txt': False}
+        results = evaluate_performance(similarities, 0.5, ground_truth, suspicious_filenames)
+        self.assertEqual(results['TP'], 0)
+        self.assertEqual(results['FP'], 2)
+        self.assertEqual(results['TN'], 0)
+        self.assertEqual(results['FN'], 0)
+
+    def test_all_true_negatives(self):
+        suspicious_filenames = ['doc1.txt', 'doc2.txt']
+        similarities = [
+                        [0.1],  # True negative
+                        [0.2]   # True negative
+                       ]
+        ground_truth = {'doc1.txt': False, 'doc2.txt': False}
+        results = evaluate_performance(similarities, 0.3, ground_truth, suspicious_filenames)
+        self.assertEqual(results['TP'], 0)
+        self.assertEqual(results['FP'], 0)
+        self.assertEqual(results['TN'], 2)
+        self.assertEqual(results['FN'], 0)
+
+    def test_varying_thresholds(self):
+        suspicious_filenames = ['doc1.txt', 'doc2.txt', 'doc3.txt']
+        similarities = [
+                        [0.5, 0.2],
+                        [0.3, 0.6],
+                        [0.7, 0.1]
+                       ]
+        ground_truth = {'doc1.txt': True, 'doc2.txt': False, 'doc3.txt': True}
+
+        low_threshold_results = evaluate_performance(similarities, 0.2, ground_truth, suspicious_filenames)
+        high_threshold_results = evaluate_performance(similarities, 0.6, ground_truth, suspicious_filenames)
+
+        self.assertEqual(low_threshold_results['TP'], 2)  # Lower threshold includes more positives
+        self.assertEqual(high_threshold_results['TP'], 1)  # Higher threshold excludes lower similarities
+
+    def test_non_existent_documents(self):
+        suspicious_filenames = ['doc1.txt', 'doc2.txt', 'doc5.txt']  # doc5.txt does not exist in similarities or ground truth
+        similarities = [
+                        [0.5, 0.2],
+                        [0.3, 0.6]
+                       ]
+        ground_truth = {'doc1.txt': True, 'doc2.txt': False}
+        with self.assertRaises(KeyError):  # Expecting a KeyError due to missing document in ground truth
+            evaluate_performance(similarities, 0.3, ground_truth, suspicious_filenames)
+
 if __name__ == '__main__':
     unittest.main()

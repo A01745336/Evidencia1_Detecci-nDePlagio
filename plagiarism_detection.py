@@ -45,6 +45,8 @@ def preprocess(text):
 
 def generate_vector_space_models(original_texts, suspicious_texts):
     """ Genera modelos de espacio vectorial para textos originales y sospechosos. """
+    if not all(isinstance(text, str) for text in original_texts + suspicious_texts):
+        raise TypeError("All inputs must be strings.")
     vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 3))
     # Combina todos los textos para crear un espacio vectorial común
     combined_texts = original_texts + suspicious_texts
