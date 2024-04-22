@@ -156,6 +156,14 @@ if __name__ == "__main__":
         'FID-09.txt': True,
         'FID-10.txt': True,
         'FID-11.txt': False,
+
+        'FID-25.txt': True,
+        'FID-26.txt': False,
+        'FID-27.txt': True,
+        'FID-28.txt': True,
+        'FID-29.txt': False,
+        'FID-30.txt': False,
+        'FID-31.txt': False,
     }
 
     # Evaluación del rendimiento
