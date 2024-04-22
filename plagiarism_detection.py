@@ -163,6 +163,13 @@ if __name__ == "__main__":
         'FID-16.txt': False,
         'FID-17.txt': False,
         'FID-18.txt': False,
+
+        'FID-19.txt': True,
+        'FID-20.txt': False,
+        'FID-21.txt': True,
+        'FID-22.txt': True,
+        'FID-23.txt': True,
+        'FID-24.txt': True,
         
         'FID-25.txt': True,
         'FID-26.txt': False,
